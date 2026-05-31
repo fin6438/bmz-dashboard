@@ -308,6 +308,13 @@ export default function App() {
     setTaskModal(null);
   };
 
+  const deleteProject = name => {
+    if (!confirm(`「${name}」を削除しますか？\n関連する進捗ログとタスクもすべて削除されます。`)) return;
+    setProjects(prev => prev.filter(p => p !== name));
+    setLogs(prev => prev.filter(l => l.プロジェクト名 !== name));
+    setTasks(prev => prev.filter(t => t.プロジェクト名 !== name));
+  };
+
   const deleteTask = id => {
     if (!confirm("このタスクを削除しますか？")) return;
     setTasks(prev => prev.filter(t => t.id !== id));
@@ -677,43 +684,53 @@ export default function App() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {projectCardData.map(p => (
-                    <button key={p.name} onClick={() => setSelectedLogProject(p.name)}
-                      className="bg-gray-900 border border-gray-800 rounded-xl p-5 text-left hover:bg-gray-800/60 transition-colors cursor-pointer group"
+                    <div key={p.name}
+                      className="bg-gray-900 border border-gray-800 rounded-xl p-5 text-left hover:bg-gray-800/60 transition-colors group relative"
                       style={{ borderTopColor: p.color, borderTopWidth: "3px" }}
                     >
+                      {/* 削除ボタン */}
+                      <button
+                        onClick={() => deleteProject(p.name)}
+                        className="absolute top-3 right-3 w-5 h-5 flex items-center justify-center rounded-full text-gray-700 hover:text-red-400 hover:bg-red-400/10 transition-colors cursor-pointer opacity-0 group-hover:opacity-100"
+                        title="案件を削除"
+                      >✕</button>
+
                       {/* 案件名 + 最終更新 */}
-                      <div className="flex items-start justify-between mb-3">
-                        <h3 className="font-semibold text-sm leading-snug pr-2" style={{ color: p.color }}>{p.name}</h3>
+                      <div
+                        className="flex items-start justify-between mb-3 cursor-pointer"
+                        onClick={() => setSelectedLogProject(p.name)}
+                      >
+                        <h3 className="font-semibold text-sm leading-snug pr-6" style={{ color: p.color }}>{p.name}</h3>
                         <span className="text-xs text-gray-600 flex-shrink-0 mt-0.5">{p.lastDate}</span>
                       </div>
 
-                      {/* 最新フェーズ */}
-                      <div className="mb-4">
-                        <span className="text-xs px-2.5 py-1 rounded-full font-medium"
-                          style={{ backgroundColor: p.color + "20", color: p.color, border: `1px solid ${p.color}40` }}>
-                          {p.latestPhase}
-                        </span>
-                      </div>
-
-                      {/* カウント行 */}
-                      <div className="flex items-center gap-4 pt-3 border-t border-gray-800">
-                        <div className="flex-1">
-                          <p className="text-xs text-gray-500 mb-0.5">進捗ログ</p>
-                          <p className="text-xl font-bold" style={{ color: p.color }}>{p.logCount}</p>
+                      {/* 最新フェーズ〜カウント行（クリックで詳細遷移） */}
+                      <div className="cursor-pointer" onClick={() => setSelectedLogProject(p.name)}>
+                        <div className="mb-4">
+                          <span className="text-xs px-2.5 py-1 rounded-full font-medium"
+                            style={{ backgroundColor: p.color + "20", color: p.color, border: `1px solid ${p.color}40` }}>
+                            {p.latestPhase}
+                          </span>
                         </div>
-                        <div className="w-px h-8 bg-gray-800" />
-                        <div className="flex-1">
-                          <p className="text-xs text-gray-500 mb-0.5">タスク</p>
-                          <p className="text-xl font-bold text-white">
-                            {p.taskCount}
-                            {p.incCount > 0 && (
-                              <span className="text-xs font-normal text-red-400 ml-1">({p.incCount}未完)</span>
-                            )}
-                          </p>
+                        <div className="flex items-center gap-4 pt-3 border-t border-gray-800">
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500 mb-0.5">進捗ログ</p>
+                            <p className="text-xl font-bold" style={{ color: p.color }}>{p.logCount}</p>
+                          </div>
+                          <div className="w-px h-8 bg-gray-800" />
+                          <div className="flex-1">
+                            <p className="text-xs text-gray-500 mb-0.5">タスク</p>
+                            <p className="text-xl font-bold text-white">
+                              {p.taskCount}
+                              {p.incCount > 0 && (
+                                <span className="text-xs font-normal text-red-400 ml-1">({p.incCount}未完)</span>
+                              )}
+                            </p>
+                          </div>
+                          <span className="text-gray-600 text-xs group-hover:text-gray-300 transition-colors self-end">→</span>
                         </div>
-                        <span className="text-gray-600 text-xs group-hover:text-gray-300 transition-colors self-end">→</span>
                       </div>
-                    </button>
+                    </div>
                   ))}
 
                   {projectCardData.length === 0 && (
