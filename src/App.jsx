@@ -5,7 +5,7 @@ import {
 } from "recharts";
 
 const CATEGORIES = ["議事録", "稟議・資料", "Amazon運用", "LP制作", "Shopify", "社内調整", "撮影", "その他"];
-const PROJECTS_LIST = ["社内EC", "マテリアル", "Angle 3D", "グラビングシューズ", "BMZ全般", "その他"];
+const INITIAL_PROJECTS_LIST = ["社内EC", "マテリアル", "Angle 3D", "グラビングシューズ", "BMZ全般", "その他"];
 const STEPS = ["企画", "制作中", "レビュー", "完了"];
 const COLORS = ["#00C9A7", "#845EC2", "#FF6B6B", "#FFC75F", "#4D8AF0", "#F9A8D4", "#94A3B8", "#FB923C"];
 
@@ -73,13 +73,16 @@ const labelCls = "text-gray-400 text-xs mb-1 block";
 export default function App() {
   const [tasks, setTasks] = useState(initialTasks);
   const [projects, setProjects] = useState(initialProjects);
+  const [projectNames, setProjectNames] = useState(INITIAL_PROJECTS_LIST);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [form, setForm] = useState({
-    name: "", project: PROJECTS_LIST[0], category: CATEGORIES[0],
+    name: "", project: INITIAL_PROJECTS_LIST[0], category: CATEGORIES[0],
     minutes: 30, status: "未完了", date: new Date().toISOString().slice(0, 10),
   });
   const [mtgInputs, setMtgInputs] = useState({});
   const [actionInputs, setActionInputs] = useState({});
+  const [newProjectName, setNewProjectName] = useState("");
+  const [showAddProject, setShowAddProject] = useState(false);
 
   const projectHours = useMemo(() => {
     const map = {};
@@ -139,6 +142,27 @@ export default function App() {
     setProjects(prev => prev.map(p =>
       p.id === pid ? { ...p, nextActions: p.nextActions.filter((_, i) => i !== idx) } : p
     ));
+
+  const addProject = () => {
+    const name = newProjectName.trim();
+    if (!name || projectNames.includes(name)) return;
+    const newId = Date.now();
+    setProjects(prev => [...prev, { id: newId, name, step: 0, mtgNotes: [], nextActions: [] }]);
+    setProjectNames(prev => {
+      const withoutOther = prev.filter(p => p !== "その他");
+      return [...withoutOther, name, "その他"];
+    });
+    setNewProjectName("");
+    setShowAddProject(false);
+  };
+
+  const removeProject = id => {
+    setProjects(prev => prev.filter(p => p.id !== id));
+    setProjectNames(prev => {
+      const name = projects.find(p => p.id === id)?.name;
+      return name ? prev.filter(p => p !== name) : prev;
+    });
+  };
 
   const tabs = [
     { id: "dashboard",  label: "ダッシュボード" },
@@ -268,7 +292,7 @@ export default function App() {
                   <div>
                     <label className={labelCls}>案件</label>
                     <select className={inputCls} value={form.project} onChange={e => setForm(f => ({ ...f, project: e.target.value }))}>
-                      {PROJECTS_LIST.map(p => <option key={p}>{p}</option>)}
+                      {projectNames.map(p => <option key={p}>{p}</option>)}
                     </select>
                   </div>
                   <div>
@@ -342,10 +366,59 @@ export default function App() {
         {/* ── PROJECTS ── */}
         {activeTab === "projects" && (
           <div className="space-y-4">
+
+            {/* 新規案件追加 */}
+            <div className="flex items-center justify-between">
+              <p className="text-gray-400 text-sm">{projects.length}件の案件</p>
+              <button
+                onClick={() => setShowAddProject(v => !v)}
+                className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+              >
+                <span className="text-lg leading-none">＋</span> 新規案件を追加
+              </button>
+            </div>
+
+            {showAddProject && (
+              <div className="bg-gray-900 border border-teal-700 rounded-xl p-5 flex gap-3 items-end">
+                <div className="flex-1">
+                  <label className={labelCls}>案件名 *</label>
+                  <input
+                    className={inputCls}
+                    placeholder="例：新商品ローンチ"
+                    value={newProjectName}
+                    onChange={e => setNewProjectName(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && addProject()}
+                    autoFocus
+                  />
+                </div>
+                <button
+                  onClick={addProject}
+                  className="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                >
+                  追加
+                </button>
+                <button
+                  onClick={() => { setShowAddProject(false); setNewProjectName(""); }}
+                  className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer"
+                >
+                  キャンセル
+                </button>
+              </div>
+            )}
+
             {projects.map(proj => (
               <div key={proj.id} className="bg-gray-900 rounded-xl border border-gray-800 p-5">
                 <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
-                  <h3 className="text-base font-semibold text-white">{proj.name}</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-base font-semibold text-white">{proj.name}</h3>
+                    <button
+                      onClick={() => removeProject(proj.id)}
+                      className="text-gray-600 hover:text-red-400 text-xs transition-colors cursor-pointer"
+                      title="案件を削除"
+                    >
+                      ✕
+                    </button>
+                  </div>
                   <StepBar step={proj.step} projectId={proj.id} onChange={updateStep} />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
