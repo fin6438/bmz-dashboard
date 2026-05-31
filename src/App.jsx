@@ -242,8 +242,8 @@ export default function App() {
   const [filterStatus,  setFilterStatus]  = useState("");
   const [filterText,    setFilterText]    = useState("");
 
-  // Log filter
-  const [filterLogProject, setFilterLogProject] = useState("");
+  // Log navigation: null = project cards, string = selected project detail
+  const [selectedLogProject, setSelectedLogProject] = useState(null);
 
   // Modals
   const [taskModal,  setTaskModal]  = useState(null);
@@ -322,14 +322,28 @@ export default function App() {
   }, [logs]);
 
   const filteredLogs = useMemo(() =>
-    filterLogProject ? logs.filter(l => l.プロジェクト名 === filterLogProject) : logs
-  , [logs, filterLogProject]);
+    selectedLogProject ? logs.filter(l => l.プロジェクト名 === selectedLogProject) : logs
+  , [logs, selectedLogProject]);
 
   const projectColor = (name) => {
-    const allProjects = [...new Set([...projects, ...logProjects])];
-    const idx = allProjects.indexOf(name);
+    const allNames = [...new Set([...projects, ...logProjects])];
+    const idx = allNames.indexOf(name);
     return PROJECT_PALETTE[(idx >= 0 ? idx : 0) % PROJECT_PALETTE.length];
   };
+
+  const projectCardData = useMemo(() => {
+    return logProjects.map(name => {
+      const pl = logs.filter(l => l.プロジェクト名 === name);
+      const sorted = [...pl].sort((a, b) => b.日付.localeCompare(a.日付));
+      return {
+        name,
+        count:       pl.length,
+        latestPhase: sorted[0]?.フェーズ  ?? "—",
+        lastDate:    sorted[0]?.日付      ?? "—",
+        color:       projectColor(name),
+      };
+    }).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
+  }, [logs, logProjects]);
 
   // ── GAS Sync ─────────────────────────────────────────────────────────────
   const flash = s => { setSyncStatus(s); setTimeout(() => setSyncStatus("idle"), 2500); };
@@ -640,127 +654,198 @@ export default function App() {
 
         {/* ════ LOGS ════ */}
         {activeTab === "logs" && (
-          <div className="space-y-4">
-            {/* Header row */}
-            <div className="flex items-center justify-between gap-4">
-              <p className="text-gray-400 text-sm flex-shrink-0">
-                {filteredLogs.length}<span className="text-gray-600"> / {logs.length} 件</span>
-              </p>
-              <button onClick={() => setShowLogForm(v => !v)}
-                className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer flex-shrink-0">
-                ＋ 進捗ログを追加
-              </button>
-            </div>
-
-            {/* Project filter tabs */}
-            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <button
-                onClick={() => setFilterLogProject("")}
-                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border ${
-                  filterLogProject === ""
-                    ? "bg-white text-gray-900 border-white"
-                    : "bg-transparent text-gray-400 border-gray-700 hover:border-gray-500"
-                }`}
-              >
-                全案件
-              </button>
-              {logProjects.map(p => {
-                const color = projectColor(p);
-                const active = filterLogProject === p;
-                return (
+          <div>
+            {/* ── 案件カード一覧 ── */}
+            {!selectedLogProject && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <p className="text-gray-400 text-sm">{projectCardData.length} 案件</p>
                   <button
-                    key={p}
-                    onClick={() => setFilterLogProject(active ? "" : p)}
-                    style={active ? { backgroundColor: color, borderColor: color, color: "#fff" } : { borderColor: color + "66", color: color }}
-                    className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors cursor-pointer border`}
+                    onClick={() => { setLogForm(EMPTY_LOG()); setShowLogForm(true); }}
+                    className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
                   >
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                    {p}
-                    <span className="text-xs opacity-60 ml-0.5">
-                      {logs.filter(l => l.プロジェクト名 === p).length}
-                    </span>
+                    ＋ 進捗ログを追加
                   </button>
-                );
-              })}
-            </div>
-
-            {/* Log form */}
-            {showLogForm && (
-              <div className="bg-gray-900 border border-teal-800 rounded-xl p-5 space-y-4">
-                <h3 className="text-sm font-semibold text-white">新規進捗ログ</h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  <div><label className={labelCls}>日付</label>
-                    <input type="date" className={inputCls} value={logForm.日付}
-                      onChange={e => setLogForm(f => ({ ...f, 日付: e.target.value }))} /></div>
-                  <div><label className={labelCls}>プロジェクト名</label>
-                    <select className={inputCls} value={logForm.プロジェクト名}
-                      onChange={e => setLogForm(f => ({ ...f, プロジェクト名: e.target.value }))}>
-                      <option value="">-- 選択 --</option>
-                      {projects.map(p => <option key={p}>{p}</option>)}</select></div>
-                  <div><label className={labelCls}>フェーズ</label>
-                    <select className={inputCls} value={logForm.フェーズ}
-                      onChange={e => setLogForm(f => ({ ...f, フェーズ: e.target.value }))}>
-                      {PHASES.map(p => <option key={p}>{p}</option>)}</select></div>
-                  <div className="col-span-2 md:col-span-3"><label className={labelCls}>進捗内容 *</label>
-                    <textarea className={`${inputCls} resize-none`} rows={2} value={logForm.進捗内容}
-                      placeholder="今回の進捗を記入"
-                      onChange={e => setLogForm(f => ({ ...f, 進捗内容: e.target.value }))} /></div>
-                  <div className="col-span-2"><label className={labelCls}>関係者</label>
-                    <input className={inputCls} value={logForm.関係者}
-                      onChange={e => setLogForm(f => ({ ...f, 関係者: e.target.value }))} placeholder="田中・佐藤" /></div>
-                  <div><label className={labelCls}>次のマイルストーン</label>
-                    <input className={inputCls} value={logForm.次のマイルストーン}
-                      onChange={e => setLogForm(f => ({ ...f, 次のマイルストーン: e.target.value }))} placeholder="○○完了（6/5）" /></div>
                 </div>
-                <div className="flex gap-2 justify-end">
-                  <button onClick={() => { setShowLogForm(false); setLogForm(EMPTY_LOG()); }}
-                    className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm cursor-pointer">キャンセル</button>
-                  <button onClick={addLog}
-                    className="bg-teal-600 hover:bg-teal-500 text-white px-5 py-2 rounded-lg text-sm font-medium cursor-pointer">追加</button>
+
+                {/* Log form (全案件モード) */}
+                {showLogForm && (
+                  <div className="bg-gray-900 border border-teal-800 rounded-xl p-5 space-y-4">
+                    <h3 className="text-sm font-semibold text-white">新規進捗ログ</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      <div><label className={labelCls}>日付</label>
+                        <input type="date" className={inputCls} value={logForm.日付}
+                          onChange={e => setLogForm(f => ({ ...f, 日付: e.target.value }))} /></div>
+                      <div><label className={labelCls}>プロジェクト名</label>
+                        <select className={inputCls} value={logForm.プロジェクト名}
+                          onChange={e => setLogForm(f => ({ ...f, プロジェクト名: e.target.value }))}>
+                          <option value="">-- 選択 --</option>
+                          {projects.map(p => <option key={p}>{p}</option>)}</select></div>
+                      <div><label className={labelCls}>フェーズ</label>
+                        <select className={inputCls} value={logForm.フェーズ}
+                          onChange={e => setLogForm(f => ({ ...f, フェーズ: e.target.value }))}>
+                          {PHASES.map(p => <option key={p}>{p}</option>)}</select></div>
+                      <div className="col-span-2 md:col-span-3"><label className={labelCls}>進捗内容 *</label>
+                        <textarea className={`${inputCls} resize-none`} rows={2} value={logForm.進捗内容}
+                          placeholder="今回の進捗を記入"
+                          onChange={e => setLogForm(f => ({ ...f, 進捗内容: e.target.value }))} /></div>
+                      <div className="col-span-2"><label className={labelCls}>関係者</label>
+                        <input className={inputCls} value={logForm.関係者}
+                          onChange={e => setLogForm(f => ({ ...f, 関係者: e.target.value }))} placeholder="田中・佐藤" /></div>
+                      <div><label className={labelCls}>次のマイルストーン</label>
+                        <input className={inputCls} value={logForm.次のマイルストーン}
+                          onChange={e => setLogForm(f => ({ ...f, 次のマイルストーン: e.target.value }))} placeholder="○○完了（6/5）" /></div>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button onClick={() => { setShowLogForm(false); setLogForm(EMPTY_LOG()); }}
+                        className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm cursor-pointer">キャンセル</button>
+                      <button onClick={addLog}
+                        className="bg-teal-600 hover:bg-teal-500 text-white px-5 py-2 rounded-lg text-sm font-medium cursor-pointer">追加</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Project cards grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {projectCardData.map(p => (
+                    <button
+                      key={p.name}
+                      onClick={() => setSelectedLogProject(p.name)}
+                      className="bg-gray-900 border border-gray-800 rounded-xl p-5 text-left hover:bg-gray-800/60 transition-colors cursor-pointer group"
+                      style={{ borderLeftColor: p.color, borderLeftWidth: "4px" }}
+                    >
+                      {/* 案件名 + 最終更新 */}
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-semibold text-white text-sm leading-snug pr-2">{p.name}</h3>
+                        <span className="text-xs text-gray-600 flex-shrink-0">{p.lastDate}</span>
+                      </div>
+
+                      {/* 最新フェーズバッジ */}
+                      <div className="mb-4">
+                        <span
+                          className="text-xs px-2.5 py-1 rounded-full font-medium"
+                          style={{ backgroundColor: p.color + "22", color: p.color, border: `1px solid ${p.color}44` }}
+                        >
+                          {p.latestPhase}
+                        </span>
+                      </div>
+
+                      {/* ログ件数 */}
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <span className="text-3xl font-bold" style={{ color: p.color }}>{p.count}</span>
+                          <span className="text-gray-500 text-xs ml-1.5">件のログ</span>
+                        </div>
+                        <span className="text-gray-600 text-xs group-hover:text-gray-400 transition-colors">詳細 →</span>
+                      </div>
+                    </button>
+                  ))}
+
+                  {projectCardData.length === 0 && (
+                    <p className="col-span-3 text-center py-16 text-gray-500 text-sm">進捗ログがありません</p>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Log list */}
-            <div className="space-y-2">
-              {filteredLogs.map((l, i) => {
-                const color = projectColor(l.プロジェクト名);
-                return (
-                  <div key={l.id ?? i}
-                    className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden group flex"
-                    style={{ borderLeftColor: color, borderLeftWidth: "3px" }}
-                  >
-                    <div className="flex-1 px-5 py-4">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-xs text-gray-500">{l.日付}</span>
-                          <span className="text-sm font-semibold" style={{ color }}>{l.プロジェクト名}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full text-gray-300"
-                            style={{ backgroundColor: color + "22", border: `1px solid ${color}44` }}>
-                            {l.フェーズ}
-                          </span>
-                          {l.関係者 && <span className="text-xs text-gray-500">👤 {l.関係者}</span>}
-                        </div>
-                        <button onClick={() => deleteLog(l.id ?? i)}
-                          className="text-gray-600 hover:text-red-400 transition-colors text-xs flex-shrink-0 cursor-pointer opacity-0 group-hover:opacity-100">✕</button>
-                      </div>
-                      <p className="text-sm text-gray-200 leading-relaxed mb-2">{l.進捗内容}</p>
-                      {l.次のマイルストーン && (
-                        <p className="text-xs" style={{ color: color + "bb" }}>
-                          <span className="mr-1" style={{ color: color + "66" }}>→</span>
-                          {l.次のマイルストーン}
-                        </p>
-                      )}
-                    </div>
+            {/* ── 案件ログ詳細 ── */}
+            {selectedLogProject && (() => {
+              const color = projectColor(selectedLogProject);
+              return (
+                <div className="space-y-4">
+                  {/* Header */}
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <button
+                      onClick={() => { setSelectedLogProject(null); setShowLogForm(false); }}
+                      className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                      戻る
+                    </button>
+                    <div className="w-px h-4 bg-gray-700" />
+                    <h2 className="text-base font-semibold" style={{ color }}>{selectedLogProject}</h2>
+                    <span className="text-xs text-gray-500">{filteredLogs.length} 件</span>
+                    <button
+                      onClick={() => {
+                        setLogForm({ ...EMPTY_LOG(), プロジェクト名: selectedLogProject });
+                        setShowLogForm(true);
+                      }}
+                      className="ml-auto flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                    >
+                      ＋ ログを追加
+                    </button>
                   </div>
-                );
-              })}
-              {filteredLogs.length === 0 && (
-                <p className="text-center py-12 text-gray-500 text-sm">
-                  {filterLogProject ? `「${filterLogProject}」の進捗ログがありません` : "進捗ログがありません"}
-                </p>
-              )}
-            </div>
+
+                  {/* Log form (案件固定) */}
+                  {showLogForm && (
+                    <div className="bg-gray-900 rounded-xl p-5 space-y-4" style={{ borderWidth: 1, borderColor: color + "66" }}>
+                      <h3 className="text-sm font-semibold text-white">{selectedLogProject} ― 新規ログ</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <div><label className={labelCls}>日付</label>
+                          <input type="date" className={inputCls} value={logForm.日付}
+                            onChange={e => setLogForm(f => ({ ...f, 日付: e.target.value }))} /></div>
+                        <div><label className={labelCls}>フェーズ</label>
+                          <select className={inputCls} value={logForm.フェーズ}
+                            onChange={e => setLogForm(f => ({ ...f, フェーズ: e.target.value }))}>
+                            {PHASES.map(p => <option key={p}>{p}</option>)}</select></div>
+                        <div className="col-span-2 md:col-span-3"><label className={labelCls}>進捗内容 *</label>
+                          <textarea className={`${inputCls} resize-none`} rows={2} value={logForm.進捗内容}
+                            placeholder="今回の進捗を記入"
+                            onChange={e => setLogForm(f => ({ ...f, 進捗内容: e.target.value }))} /></div>
+                        <div className="col-span-2"><label className={labelCls}>関係者</label>
+                          <input className={inputCls} value={logForm.関係者}
+                            onChange={e => setLogForm(f => ({ ...f, 関係者: e.target.value }))} placeholder="田中・佐藤" /></div>
+                        <div><label className={labelCls}>次のマイルストーン</label>
+                          <input className={inputCls} value={logForm.次のマイルストーン}
+                            onChange={e => setLogForm(f => ({ ...f, 次のマイルストーン: e.target.value }))} placeholder="○○完了（6/5）" /></div>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={() => { setShowLogForm(false); setLogForm(EMPTY_LOG()); }}
+                          className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm cursor-pointer">キャンセル</button>
+                        <button onClick={addLog}
+                          className="bg-teal-600 hover:bg-teal-500 text-white px-5 py-2 rounded-lg text-sm font-medium cursor-pointer">追加</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Log list */}
+                  <div className="space-y-2">
+                    {filteredLogs.map((l, i) => (
+                      <div key={l.id ?? i}
+                        className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden group"
+                        style={{ borderLeftColor: color, borderLeftWidth: "3px" }}
+                      >
+                        <div className="px-5 py-4">
+                          <div className="flex items-start justify-between gap-4 mb-2">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="text-xs text-gray-500 font-mono">{l.日付}</span>
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ backgroundColor: color + "22", color, border: `1px solid ${color}44` }}
+                              >{l.フェーズ}</span>
+                              {l.関係者 && <span className="text-xs text-gray-500">👤 {l.関係者}</span>}
+                            </div>
+                            <button onClick={() => deleteLog(l.id ?? i)}
+                              className="text-gray-700 hover:text-red-400 transition-colors text-xs flex-shrink-0 cursor-pointer opacity-0 group-hover:opacity-100">✕</button>
+                          </div>
+                          <p className="text-sm text-gray-200 leading-relaxed mb-2">{l.進捗内容}</p>
+                          {l.次のマイルストーン && (
+                            <p className="text-xs" style={{ color: color + "cc" }}>
+                              <span className="mr-1 opacity-60">→</span>{l.次のマイルストーン}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {filteredLogs.length === 0 && (
+                      <p className="text-center py-12 text-gray-500 text-sm">ログがありません</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </main>
