@@ -252,6 +252,8 @@ export default function App() {
 
   // Log navigation: null = project cards, string = selected project detail
   const [selectedLogProject, setSelectedLogProject] = useState(null);
+  const [showAddProject,  setShowAddProject]  = useState(false);
+  const [newProjectName,  setNewProjectName]  = useState("");
 
   // Modals
   const [taskModal,  setTaskModal]  = useState(null);
@@ -315,6 +317,14 @@ export default function App() {
     setTasks(prev => prev.filter(t => t.プロジェクト名 !== name));
   };
 
+  const addProject = () => {
+    const name = newProjectName.trim();
+    if (!name || projects.includes(name)) return;
+    setProjects(prev => [...prev, name]);
+    setNewProjectName("");
+    setShowAddProject(false);
+  };
+
   const deleteTask = id => {
     if (!confirm("このタスクを削除しますか？")) return;
     setTasks(prev => prev.filter(t => t.id !== id));
@@ -347,7 +357,8 @@ export default function App() {
   };
 
   const projectCardData = useMemo(() => {
-    return logProjects.map(name => {
+    const allNames = [...new Set([...projects, ...logProjects])];
+    return allNames.map(name => {
       const pl = logs.filter(l => l.プロジェクト名 === name);
       const sorted = [...pl].sort((a, b) => b.日付.localeCompare(a.日付));
       const pt = tasks.filter(t => t.プロジェクト名 === name);
@@ -362,7 +373,7 @@ export default function App() {
         color:       projectColor(name),
       };
     }).sort((a, b) => b.lastDate.localeCompare(a.lastDate));
-  }, [logs, logProjects, tasks]);
+  }, [logs, logProjects, projects, tasks]);
 
   // ── GAS Sync ─────────────────────────────────────────────────────────────
   const flash = s => { setSyncStatus(s); setTimeout(() => setSyncStatus("idle"), 2500); };
@@ -678,9 +689,40 @@ export default function App() {
             {/* ── トップ: 案件カード一覧 ── */}
             {!selectedLogProject && (
               <div className="space-y-5">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-3">
                   <p className="text-gray-400 text-sm">{projectCardData.length} 案件</p>
+                  <button
+                    onClick={() => { setShowAddProject(v => !v); setNewProjectName(""); }}
+                    className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                  >
+                    ＋ 案件を追加
+                  </button>
                 </div>
+
+                {/* 案件追加フォーム */}
+                {showAddProject && (
+                  <div className="bg-gray-900 border border-teal-800 rounded-xl p-4 flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className={labelCls}>案件名 *</label>
+                      <input
+                        className={inputCls}
+                        placeholder="例：新商品ローンチ"
+                        value={newProjectName}
+                        onChange={e => setNewProjectName(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && addProject()}
+                        autoFocus
+                      />
+                    </div>
+                    <button onClick={addProject}
+                      className="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer flex-shrink-0">
+                      追加
+                    </button>
+                    <button onClick={() => setShowAddProject(false)}
+                      className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer flex-shrink-0">
+                      キャンセル
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {projectCardData.map(p => (
