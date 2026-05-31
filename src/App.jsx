@@ -83,6 +83,10 @@ export default function App() {
   const [actionInputs, setActionInputs] = useState({});
   const [newProjectName, setNewProjectName] = useState("");
   const [showAddProject, setShowAddProject] = useState(false);
+  const [gasUrl, setGasUrl] = useState(() => localStorage.getItem("gasUrl") ?? "");
+  const [gasUrlDraft, setGasUrlDraft] = useState(() => localStorage.getItem("gasUrl") ?? "");
+  const [syncStatus, setSyncStatus] = useState("idle"); // idle | saving | loading | success | error
+  const [showSettings, setShowSettings] = useState(false);
 
   const projectHours = useMemo(() => {
     const map = {};
@@ -164,6 +168,56 @@ export default function App() {
     });
   };
 
+  const flash = status => {
+    setSyncStatus(status);
+    setTimeout(() => setSyncStatus("idle"), 2500);
+  };
+
+  const saveToSheet = async () => {
+    if (!gasUrl) { setShowSettings(true); return; }
+    setSyncStatus("saving");
+    try {
+      await fetch(gasUrl, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify({ tasks, projects }),
+      });
+      flash("success");
+    } catch (_) {
+      flash("error");
+    }
+  };
+
+  const loadFromSheet = async () => {
+    if (!gasUrl) { setShowSettings(true); return; }
+    setSyncStatus("loading");
+    try {
+      const res = await fetch(`${gasUrl}?t=${Date.now()}`);
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      if (data.tasks?.length)    setTasks(data.tasks);
+      if (data.projects?.length) {
+        setProjects(data.projects);
+        setProjectNames(prev => {
+          const existing = new Set(prev);
+          const fresh = data.projects.map(p => p.name).filter(n => !existing.has(n));
+          if (!fresh.length) return prev;
+          const base = prev.filter(p => p !== "その他");
+          return [...base, ...fresh, "その他"];
+        });
+      }
+      flash("success");
+    } catch (_) {
+      flash("error");
+    }
+  };
+
+  const saveGasUrl = () => {
+    localStorage.setItem("gasUrl", gasUrlDraft);
+    setGasUrl(gasUrlDraft);
+    setShowSettings(false);
+  };
+
   const tabs = [
     { id: "dashboard",  label: "ダッシュボード" },
     { id: "input",      label: "タスク入力" },
@@ -175,17 +229,75 @@ export default function App() {
     year: "numeric", month: "long", day: "numeric", weekday: "short",
   });
 
+  const syncLabel = { idle: null, saving: "保存中…", loading: "読込中…", success: "✓ 完了", error: "エラー" }[syncStatus];
+  const syncColor = { idle: "", saving: "text-yellow-400", loading: "text-blue-400", success: "text-teal-400", error: "text-red-400" }[syncStatus];
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
 
+      {/* Settings modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" onClick={() => setShowSettings(false)}>
+          <div className="bg-gray-900 rounded-xl border border-gray-700 p-6 w-full max-w-lg mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h2 className="text-base font-semibold text-white mb-1">GAS 連携設定</h2>
+            <p className="text-gray-500 text-xs mb-4">Google Apps Script の Web アプリ URL を入力してください</p>
+            <label className={labelCls}>Web アプリ URL</label>
+            <input
+              className={`${inputCls} mb-4`}
+              placeholder="https://script.google.com/macros/s/.../exec"
+              value={gasUrlDraft}
+              onChange={e => setGasUrlDraft(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && saveGasUrl()}
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowSettings(false)} className="bg-gray-700 hover:bg-gray-600 text-gray-300 px-4 py-2 rounded-lg text-sm transition-colors cursor-pointer">
+                キャンセル
+              </button>
+              <button onClick={saveGasUrl} className="bg-teal-600 hover:bg-teal-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer">
+                保存
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-gray-900 border-b border-gray-800 px-6 py-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
           <div>
             <h1 className="text-xl font-bold">BMZ 営業部1課</h1>
             <p className="text-gray-500 text-xs mt-0.5">業務管理ダッシュボード</p>
           </div>
-          <span className="text-gray-500 text-sm">{today}</span>
+          <div className="flex items-center gap-2 ml-auto">
+            {syncLabel && <span className={`text-xs font-medium ${syncColor}`}>{syncLabel}</span>}
+            <button
+              onClick={loadFromSheet}
+              disabled={syncStatus !== "idle"}
+              title="スプレッドシートから読込"
+              className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+              読込
+            </button>
+            <button
+              onClick={saveToSheet}
+              disabled={syncStatus !== "idle"}
+              title="スプレッドシートへ保存"
+              className="flex items-center gap-1.5 bg-teal-700 hover:bg-teal-600 disabled:opacity-40 text-white text-xs px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" /></svg>
+              保存
+            </button>
+            <button
+              onClick={() => { setGasUrlDraft(gasUrl); setShowSettings(true); }}
+              title="GAS 設定"
+              className={`p-1.5 rounded-lg transition-colors cursor-pointer ${gasUrl ? "text-gray-500 hover:text-gray-300" : "text-yellow-500 hover:text-yellow-400"}`}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </button>
+          </div>
+          <span className="text-gray-500 text-sm hidden md:block">{today}</span>
         </div>
       </header>
 
