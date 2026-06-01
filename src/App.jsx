@@ -550,7 +550,7 @@ export default function App() {
       <header className="bg-white border-b-2 border-gray-100 px-6 py-4 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
           <div className="flex-shrink-0">
-            <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">🏃 BMZ 営業部1課</h1>
+            <h1 className="text-xl font-extrabold text-gray-900 tracking-tight">🏃 BMZ営業部</h1>
             <p className="text-gray-400 text-xs mt-0.5 font-semibold">業務管理ダッシュボード</p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
