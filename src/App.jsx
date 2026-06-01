@@ -448,6 +448,20 @@ export default function App() {
   const deleteEcRequest = id =>
     setEcRequests(prev => prev.filter(r => r.id !== id));
 
+  // 設定：案件リネーム
+  const [editingProject, setEditingProject] = useState(null); // { old, draft }
+
+  const renameProject = () => {
+    const oldName = editingProject.old;
+    const newName = editingProject.draft.trim();
+    if (!newName || newName === oldName) { setEditingProject(null); return; }
+    if (projects.includes(newName)) { alert("その案件名は既に存在します"); return; }
+    setProjects(prev => prev.map(p => p === oldName ? newName : p));
+    setTasks(prev => prev.map(t => t.プロジェクト名 === oldName ? { ...t, プロジェクト名: newName } : t));
+    setLogs(prev => prev.map(l => l.プロジェクト名 === oldName ? { ...l, プロジェクト名: newName } : l));
+    setEditingProject(null);
+  };
+
   const addProject = () => {
     const name = newProjectName.trim();
     if (!name || projects.includes(name)) return;
@@ -505,6 +519,7 @@ export default function App() {
     { id: "tasks",     label: `タスク一覧 (${tasks.length})` },
     { id: "logs",      label: "受持案件(進捗ログ)" },
     { id: "requests",  label: photoActive + ecActive > 0 ? `依頼管理 (${photoActive + ecActive})` : "依頼管理" },
+    { id: "settings",  label: "⚙ 設定" },
   ];
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -1286,6 +1301,108 @@ export default function App() {
                 </section>
               );
             })()}
+          </div>
+        )}
+
+        {/* ════ SETTINGS ════ */}
+        {activeTab === "settings" && (
+          <div className="max-w-2xl space-y-8">
+
+            {/* 案件管理 */}
+            <section>
+              <h2 className="text-base font-extrabold text-gray-900 mb-1">案件管理</h2>
+              <p className="text-gray-400 text-xs font-medium mb-4">案件名を変更すると、タスク・進捗ログの紐付けも自動で更新されます</p>
+
+              <div className="bg-white rounded-2xl border-2 border-gray-100 overflow-hidden shadow-sm">
+                <div className="divide-y-2 divide-gray-50">
+                  {projects.map((p, i) => (
+                    <div key={p} className="flex items-center gap-3 px-5 py-3 group hover:bg-gray-50 transition-colors">
+                      <span className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-extrabold flex-shrink-0"
+                        style={{ backgroundColor: PROJECT_PALETTE[i % PROJECT_PALETTE.length] }}>
+                        {p.charAt(0)}
+                      </span>
+
+                      {editingProject?.old === p ? (
+                        /* 編集モード */
+                        <div className="flex items-center gap-2 flex-1">
+                          <input
+                            className="duo-input flex-1"
+                            value={editingProject.draft}
+                            onChange={e => setEditingProject(prev => ({ ...prev, draft: e.target.value }))}
+                            onKeyDown={e => {
+                              if (e.key === "Enter") renameProject();
+                              if (e.key === "Escape") setEditingProject(null);
+                            }}
+                            autoFocus
+                          />
+                          <button onClick={renameProject}
+                            className="duo-btn duo-btn-green px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0">保存</button>
+                          <button onClick={() => setEditingProject(null)}
+                            className="duo-btn duo-btn-gray px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0">キャンセル</button>
+                        </div>
+                      ) : (
+                        /* 表示モード */
+                        <div className="flex items-center gap-2 flex-1">
+                          <span className="text-sm font-bold text-gray-900 flex-1">{p}</span>
+                          <span className="text-xs text-gray-400 font-medium">
+                            タスク {tasks.filter(t => t.プロジェクト名 === p).length}件 ／
+                            ログ {logs.filter(l => l.プロジェクト名 === p).length}件
+                          </span>
+                          <button
+                            onClick={() => setEditingProject({ old: p, draft: p })}
+                            className="duo-btn duo-btn-gray px-3 py-1.5 rounded-xl text-xs font-bold flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >✏️ 変更</button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* 新規案件追加 */}
+                <div className="px-5 py-4 border-t-2 border-gray-100 bg-gray-50">
+                  {showAddProject ? (
+                    <div className="flex gap-2 items-center">
+                      <input className="duo-input flex-1" placeholder="新しい案件名"
+                        value={newProjectName} onChange={e => setNewProjectName(e.target.value)}
+                        onKeyDown={e => { if (e.key === "Enter") addProject(); if (e.key === "Escape") setShowAddProject(false); }}
+                        autoFocus />
+                      <button onClick={addProject} className="duo-btn duo-btn-green px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0">追加</button>
+                      <button onClick={() => setShowAddProject(false)} className="duo-btn duo-btn-gray px-4 py-2 rounded-xl text-sm font-bold flex-shrink-0">キャンセル</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowAddProject(true)}
+                      className="duo-btn duo-btn-green w-full py-2.5 rounded-xl text-sm font-bold">
+                      ＋ 新規案件を追加
+                    </button>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            {/* GAS 連携設定 */}
+            <section>
+              <h2 className="text-base font-extrabold text-gray-900 mb-1">GAS 連携設定</h2>
+              <p className="text-gray-400 text-xs font-medium mb-4">Google Apps Script の Web アプリ URL を設定するとスプレッドシートと同期できます</p>
+              <div className="bg-white rounded-2xl border-2 border-gray-100 p-5 shadow-sm space-y-4">
+                <div>
+                  <label className={labelCls}>Web アプリ URL</label>
+                  <input className={inputCls} placeholder="https://script.google.com/macros/s/.../exec"
+                    value={gasUrlDraft} onChange={e => setGasUrlDraft(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && saveGasUrl()} />
+                </div>
+                {gasUrl && (
+                  <p className="text-xs text-[#58CC02] font-bold">✓ 連携済み：{gasUrl.slice(0, 60)}…</p>
+                )}
+                <div className="flex gap-3">
+                  <button onClick={saveGasUrl} className="duo-btn duo-btn-green px-5 py-2.5 rounded-2xl text-sm font-bold">保存</button>
+                  {gasUrl && (
+                    <button onClick={() => { setGasUrlDraft(""); localStorage.removeItem("gasUrl"); setGasUrl(""); setGasUrlDraft(""); }}
+                      className="duo-btn duo-btn-gray px-5 py-2.5 rounded-2xl text-sm font-bold">連携解除</button>
+                  )}
+                </div>
+              </div>
+            </section>
+
           </div>
         )}
       </main>
