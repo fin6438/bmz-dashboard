@@ -77,14 +77,8 @@ const EMPTY_EC = () => ({
   期日: "", ステータス: "受付", 完了日: "", 備考: "",
 });
 
-// ── Sample data ───────────────────────────────────────────────────────────────
-const initialTasks = [
-  { id: "T001", 起案日: "2026-05-20", タスク名: "キックオフMTG議事録", タスク種別: "議事録", プロジェクト名: "グラビングシューズ", 関係者: "田中・佐藤", 役員関与: false, 規模: "S", ステータス: "完了", 期日: "2026-05-28", 次のアクション: "", 完了日: "2026-05-28", EC依頼: false, 進捗ログ登録: true, 進捗メモ: "キックオフ完了", カテゴリ: "管理", 撮影依頼: false, 撮影メモ: "" },
-  { id: "T002", 起案日: "2026-05-22", タスク名: "GAIA-MAX LP企画書", タスク種別: "LP制作", プロジェクト名: "Angle 3D", 関係者: "山田", 役員関与: true, 規模: "L", ステータス: "進行中", 期日: "2026-06-05", 次のアクション: "デザイン確認", 完了日: "", EC依頼: false, 進捗ログ登録: false, 進捗メモ: "構成案作成中", カテゴリ: "制作", 撮影依頼: false, 撮影メモ: "" },
-  { id: "T003", 起案日: "2026-05-25", タスク名: "Amazon週次レポート", タスク種別: "Amazon運用", プロジェクト名: "社内EC", 関係者: "鈴木", 役員関与: false, 規模: "S", ステータス: "完了", 期日: "2026-05-29", 次のアクション: "", 完了日: "2026-05-29", EC依頼: true, 進捗ログ登録: false, 進捗メモ: "", カテゴリ: "EC運用", 撮影依頼: false, 撮影メモ: "" },
-  { id: "T004", 起案日: "2026-05-26", タスク名: "Shopifyテスト商品ページ", タスク種別: "Shopify", プロジェクト名: "Angle 3D", 関係者: "田中", 役員関与: false, 規模: "M", ステータス: "未着手", 期日: "2026-06-03", 次のアクション: "商品データ整理", 完了日: "", EC依頼: false, 進捗ログ登録: false, 進捗メモ: "", カテゴリ: "EC運用", 撮影依頼: true, 撮影メモ: "商品写真10点" },
-  { id: "T005", 起案日: "2026-05-27", タスク名: "マテリアル稟議書v9", タスク種別: "稟議・資料", プロジェクト名: "マテリアル", 関係者: "部長・山本", 役員関与: true, 規模: "M", ステータス: "レビュー中", 期日: "2026-06-01", 次のアクション: "部長確認", 完了日: "", EC依頼: false, 進捗ログ登録: true, 進捗メモ: "v9提出済み", カテゴリ: "管理", 撮影依頼: false, 撮影メモ: "" },
-];
+// ── Initial data ──────────────────────────────────────────────────────────────
+const initialTasks = [];
 
 const initialLogs = [
   { id: 1, 日付: "2026-05-29", プロジェクト名: "メディアエンジン施策", フェーズ: "社内決定共有", 進捗内容: "KV・販売方針の決定事項をメディアエンジンに正式共有（田波対応）", 関係者: "田波、兵藤", 次のマイルストーン: "KV・ロゴ制作・撮影調整" },
@@ -275,7 +269,7 @@ const labelCls = "text-gray-500 text-xs font-bold uppercase tracking-wide mb-1 b
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tasks,    setTasks]    = useState(() => load("bmz_tasks",    initialTasks));
+  const [tasks,    setTasks]    = useState(() => load("bmz_tasks_v2", initialTasks));
   const [logs,     setLogs]     = useState(() => load("bmz_logs",     initialLogs));
   const [projects, setProjects] = useState(() => load("bmz_projects", initialProjects));
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -307,7 +301,7 @@ export default function App() {
   const [logForm,     setLogForm]     = useState(EMPTY_LOG());
 
   // ── localStorage 自動保存 ────────────────────────────────────────────────
-  useEffect(() => { save("bmz_tasks",    tasks);        }, [tasks]);
+  useEffect(() => { save("bmz_tasks_v2", tasks);        }, [tasks]);
   useEffect(() => { save("bmz_logs",     logs);         }, [logs]);
   useEffect(() => { save("bmz_projects", projects);     }, [projects]);
   useEffect(() => { save("bmz_photo",    photoRequests);}, [photoRequests]);
