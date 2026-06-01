@@ -509,7 +509,7 @@ export default function App() {
   const tabs = [
     { id: "dashboard", label: "ダッシュボード" },
     { id: "tasks",     label: `タスク一覧 (${tasks.length})` },
-    { id: "logs",      label: "進捗ログ" },
+    { id: "logs",      label: "受持案件(進捗ログ)" },
     { id: "requests",  label: photoActive + ecActive > 0 ? `依頼管理 (${photoActive + ecActive})` : "依頼管理" },
   ];
 
