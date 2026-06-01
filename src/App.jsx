@@ -546,6 +546,18 @@ export default function App() {
             <p className="text-gray-400 text-xs mt-0.5 font-semibold">業務管理ダッシュボード</p>
           </div>
           <div className="flex items-center gap-2 ml-auto">
+            <a
+              href="https://docs.google.com/spreadsheets/d/16FgIbuPKEAC3N-ctCKfkQ4gYAw35nbYus-8BLGHAItQ"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="duo-btn duo-btn-gray flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-xl"
+              title="スプレッドシートを開く"
+            >
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+              </svg>
+              スプシ
+            </a>
             {syncLabel && <span className={`text-xs font-bold ${syncColor}`}>{syncLabel}</span>}
             <button onClick={loadFromSheet} disabled={syncStatus !== "idle"}
               className="duo-btn duo-btn-gray gap-1.5 text-xs px-3 py-2 rounded-xl font-bold disabled:opacity-40">
