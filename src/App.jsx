@@ -85,7 +85,6 @@ const initialLogs = [
   { id: 2, 日付: "2026-05-28", プロジェクト名: "メディアエンジン施策", フェーズ: "KV決定", 進捗内容: "KVをA案「カラダをつくる靴」に決定。AirとRootsはクラファンで販売。スポルテックは試し履き会場として活用", 関係者: "田波、兵藤", 次のマイルストーン: "クリエイティブ制作・撮影段取り" },
   { id: 3, 日付: "2026-05-28", プロジェクト名: "グラビングシューズ", フェーズ: "企画", 進捗内容: "キックオフMTG実施。ターゲット・競合調査方針決定", 関係者: "田中・佐藤", 次のマイルストーン: "競合調査完了（6/5）" },
   { id: 4, 日付: "2026-05-27", プロジェクト名: "Angle 3D", フェーズ: "制作", 進捗内容: "GAIA-MAX LP構成案作成開始", 関係者: "山田", 次のマイルストーン: "LP企画書提出（6/5）" },
-  { id: 5, 日付: "2026-05-27", プロジェクト名: "マテリアル", フェーズ: "レビュー", 進捗内容: "稟議書v9提出。部長レビュー待ち", 関係者: "部長・山本", 次のマイルストーン: "承認（6/1）" },
   { id: 6, 日付: "2026-05-22", プロジェクト名: "メディアエンジン施策", フェーズ: "すり合わせ", 進捗内容: "KVアンケート結果共有（A案「カラダをつくる靴」が全指標トップ）。重点施策・スケジュール・見積もり提示", 関係者: "坂庭、兵藤", 次のマイルストーン: "5/28 MTG" },
   { id: 7, 日付: "2026-05-14", プロジェクト名: "メディアエンジン施策", フェーズ: "提案", 進捗内容: "ソウルドアウトグループによるブランド戦略提案（BMZみなかみ来社5名）。KPI52,000足・予算2,500万〜1.9億円の2プラン提示", 関係者: "山中、高橋、深澤、坂庭、田波、兵藤", 次のマイルストーン: "KV・施策すり合わせMTG" },
   { id: 8, 日付: "2026-05-08", プロジェクト名: "メディアエンジン施策", フェーズ: "調整", 進捗内容: "ロゴ提案スコープ確認。グラビングシリーズロゴはMEが提案（5月末目途）。化粧箱は中長期課題に", 関係者: "田波、兵藤", 次のマイルストーン: "5/14提案MTG" },
@@ -110,7 +109,7 @@ const initialLogs = [
   { id: 27, 日付: "2026-04-16", プロジェクト名: "㈱マテリアル", フェーズ: "キックオフ", 進捗内容: "マテリアル飯伏氏がBMZみなかみに来社。初回対面MTG。NDA雛形を受領", 関係者: "山中、高橋、深澤、坂庭、飯伏", 次のマイルストーン: "NDA締結・次回MTG調整" },
 ];
 
-const initialProjects = ["社内EC", "マテリアル", "㈱マテリアル", "Angle 3D", "グラビングシューズ", "BMZ全般"];
+const initialProjects = ["社内EC", "㈱マテリアル", "Angle 3D", "グラビングシューズ", "BMZ全般"];
 
 // ── Sub components ────────────────────────────────────────────────────────────
 function Badge({ status }) {
@@ -270,8 +269,8 @@ const labelCls = "text-gray-500 text-xs font-bold uppercase tracking-wide mb-1 b
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
   const [tasks,    setTasks]    = useState(() => load("bmz_tasks_v2", initialTasks));
-  const [logs,     setLogs]     = useState(() => load("bmz_logs",     initialLogs));
-  const [projects, setProjects] = useState(() => load("bmz_projects", initialProjects));
+  const [logs,     setLogs]     = useState(() => load("bmz_logs_v2",     initialLogs));
+  const [projects, setProjects] = useState(() => load("bmz_projects_v2", initialProjects));
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const [gasUrl,      setGasUrl]      = useState(() => localStorage.getItem("gasUrl") ?? "");
@@ -302,8 +301,8 @@ export default function App() {
 
   // ── localStorage 自動保存 ────────────────────────────────────────────────
   useEffect(() => { save("bmz_tasks_v2", tasks);        }, [tasks]);
-  useEffect(() => { save("bmz_logs",     logs);         }, [logs]);
-  useEffect(() => { save("bmz_projects", projects);     }, [projects]);
+  useEffect(() => { save("bmz_logs_v2",     logs);         }, [logs]);
+  useEffect(() => { save("bmz_projects_v2", projects);     }, [projects]);
   useEffect(() => { save("bmz_photo",    photoRequests);}, [photoRequests]);
   useEffect(() => { save("bmz_ec",       ecRequests);   }, [ecRequests]);
 
