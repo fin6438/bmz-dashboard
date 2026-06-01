@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -258,15 +258,26 @@ function TaskModal({ task, projects, onSave, onClose }) {
   );
 }
 
+// ── localStorage helpers ──────────────────────────────────────────────────────
+function load(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch { return fallback; }
+}
+function save(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
 // ── Shared styles ─────────────────────────────────────────────────────────────
 const inputCls = "duo-input";
 const labelCls = "text-gray-500 text-xs font-bold uppercase tracking-wide mb-1 block";
 
 // ── App ───────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tasks,    setTasks]    = useState(initialTasks);
-  const [logs,     setLogs]     = useState(initialLogs);
-  const [projects, setProjects] = useState(initialProjects);
+  const [tasks,    setTasks]    = useState(() => load("bmz_tasks",    initialTasks));
+  const [logs,     setLogs]     = useState(() => load("bmz_logs",     initialLogs));
+  const [projects, setProjects] = useState(() => load("bmz_projects", initialProjects));
   const [activeTab, setActiveTab] = useState("dashboard");
 
   const [gasUrl,      setGasUrl]      = useState(() => localStorage.getItem("gasUrl") ?? "");
@@ -282,8 +293,8 @@ export default function App() {
   const [showAddProject,  setShowAddProject]  = useState(false);
   const [newProjectName,  setNewProjectName]  = useState("");
 
-  const [photoRequests, setPhotoRequests] = useState([]);
-  const [ecRequests,    setEcRequests]    = useState([]);
+  const [photoRequests, setPhotoRequests] = useState(() => load("bmz_photo", []));
+  const [ecRequests,    setEcRequests]    = useState(() => load("bmz_ec",    []));
   const [showPhotoForm, setShowPhotoForm] = useState(false);
   const [showEcForm,    setShowEcForm]    = useState(false);
   const [photoForm,     setPhotoForm]     = useState(EMPTY_PHOTO());
@@ -294,6 +305,13 @@ export default function App() {
   const [taskModal,   setTaskModal]   = useState(null);
   const [showLogForm, setShowLogForm] = useState(false);
   const [logForm,     setLogForm]     = useState(EMPTY_LOG());
+
+  // ── localStorage 自動保存 ────────────────────────────────────────────────
+  useEffect(() => { save("bmz_tasks",    tasks);        }, [tasks]);
+  useEffect(() => { save("bmz_logs",     logs);         }, [logs]);
+  useEffect(() => { save("bmz_projects", projects);     }, [projects]);
+  useEffect(() => { save("bmz_photo",    photoRequests);}, [photoRequests]);
+  useEffect(() => { save("bmz_ec",       ecRequests);   }, [ecRequests]);
 
   // ── Computed ────────────────────────────────────────────────────────────
   const today = new Date().toISOString().slice(0, 10);
